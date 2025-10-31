@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="1. BenchMark">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="2. GameObject">
+      <UniqueIdentifier>{a6007c4d-7784-4e8e-8238-34b6c5db6313}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="3. MemoryPool">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="0. pch">
+      <UniqueIdentifier>{c1f8b495-b02f-4060-85cf-d9f427ea9141}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>1. BenchMark</Filter>
+    </ClCompile>
+    <ClCompile Include="CBullet.cpp">
+      <Filter>2. GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>0. pch</Filter>
+    </ClCompile>
+    <ClCompile Include="MemoryPool.cpp">
+      <Filter>3. MemoryPool</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CBullet.h">
+      <Filter>2. GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>0. pch</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryPool.h">
+      <Filter>3. MemoryPool</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
