@@ -13,7 +13,8 @@ private:
 	void*		m_Buffer;
 	size_t		m_Capacity;
 	size_t		m_ObjectSize;
-	list<T*>	m_listFreeNodes;
+
+	list<void*> m_listFreePtrs;
 
 
 public:
@@ -23,11 +24,11 @@ public:
 	void Destroy();
 
 	T* Allocate();
-	void Dallocate(T* _Obj);
+	void Deallocate(T* _Obj);
 
 
 private:
-	MemoryPool() : m_Buffer(nullptr), m_Capacity(0), m_ObjectSize(0), m_listFreeNodes{} {}
+	MemoryPool() : m_Buffer(nullptr), m_Capacity(0), m_ObjectSize(0), m_listFreePtrs{} {}
 	~MemoryPool() { Destroy(); }
 
 	// 복사/대입 금지해서 싱글턴 유지
@@ -49,8 +50,7 @@ inline void MemoryPool<T>::Init(size_t _Capacity)
 	char* Ptr = static_cast<char*>(m_Buffer);
 	for (size_t i = 0; i < m_Capacity; ++i)
 	{
-		T* Node = new (Ptr) T;
-		m_listFreeNodes.push_back(Node);
+		m_listFreePtrs.push_back(Ptr);
 		Ptr += m_ObjectSize;
 	}
 }
@@ -59,27 +59,17 @@ inline void MemoryPool<T>::Init(size_t _Capacity)
 template<typename T>
 inline void MemoryPool<T>::Destroy()
 {
-	// 이미 Init()때 모든 객체는 placement new로 생성됐으므로
-	// 현재 freeNodes에 있든, 빌려간 상태든 상관없이 전체 버퍼를 순회하며 소멸자를 호출해줘야 안전함.
-	// -> 포인터들을 다 들고 있지 않으니까, 그냥 한 번 전체를 깔끔하게 순회한다.
 
+	// void 포인터 해제해주기
 	if (m_Buffer)
 	{
-		char* Ptr = static_cast<char*>(m_Buffer);
-		for (size_t i = 0; i < m_Capacity; ++i)
-		{
-			T* Obj = reinterpret_cast<T*>(Ptr);
-			Obj->~T(); // 소멸자 호출
-			Ptr += m_ObjectSize;
-		}
-
 		::operator delete(m_Buffer);
 		m_Buffer = nullptr;
 	}
 
 
 	// Free 리스트 비우기
-	m_listFreeNodes.clear();
+	m_listFreePtrs.clear();
 
 	// 메타데이터 초기화
 	m_Capacity = 0;
@@ -89,20 +79,22 @@ inline void MemoryPool<T>::Destroy()
 template<typename T>
 inline T* MemoryPool<T>::Allocate()
 {
-	if (m_listFreeNodes.empty())
+	if (m_listFreePtrs.empty())
 	{
 		// 풀 고갈 상황
 		return nullptr;
 	}
-	T* Node = m_listFreeNodes.front();
-	m_listFreeNodes.pop_front();
+	void* Ptr = m_listFreePtrs.front();
+	// new placement 호출로 생성자 자동 호출 및 객체 생명주기 시작
+	T* Node = new (Ptr) T;
+	m_listFreePtrs.pop_front();
 	return Node;
 }
 
 template<typename T>
-inline void MemoryPool<T>::Dallocate(T* _Obj)
+inline void MemoryPool<T>::Deallocate(T* _Obj)
 {
-	// 여기서 _Obj의 상태를 사용자가 재초기화하거나 비활성화하는 건 게임 로직에서 할 일
-	// 풀은 그냥 반납만 받는다.
-	m_listFreeNodes.push_back(_Obj);
+	// 객체의 소멸자 호출
+	_Obj->~T();
+	m_listFreePtrs.push_back((void*)_Obj);
 }
