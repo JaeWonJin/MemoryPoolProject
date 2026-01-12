@@ -3,6 +3,7 @@ template <typename T>
 class MemoryPool
 {
 public:
+	struct FreeNode { FreeNode* Next; };
 	static MemoryPool<T>& GetInst()
 	{
 		static MemoryPool<T> Inst;
@@ -14,7 +15,8 @@ private:
 	size_t		m_Capacity;
 	size_t		m_ObjectSize;
 
-	list<void*> m_listFreePtrs;
+	FreeNode*	m_FreeHead;
+
 
 
 public:
@@ -28,7 +30,7 @@ public:
 
 
 private:
-	MemoryPool() : m_Buffer(nullptr), m_Capacity(0), m_ObjectSize(0), m_listFreePtrs{} {}
+	MemoryPool() : m_Buffer(nullptr), m_Capacity(0), m_ObjectSize(0), m_FreeHead(nullptr) {}
 	~MemoryPool() { Destroy(); }
 
 	// 복사/대입 금지해서 싱글턴 유지
@@ -43,15 +45,22 @@ inline void MemoryPool<T>::Init(size_t _Capacity)
 	Destroy();
 
 	m_Capacity = _Capacity;
-	m_ObjectSize = sizeof(T);
+	// 최소 크기 및 정렬 보정
+	size_t size = std::max(sizeof(T), sizeof(FreeNode));
+	size_t alignment = std::max(alignof(T), alignof(FreeNode));
+	m_ObjectSize = (size + alignment - 1) & ~(alignment - 1);
+	m_FreeHead = nullptr;
 
 	// 버퍼에 메모리 할당
 	m_Buffer = ::operator new(m_ObjectSize * m_Capacity);
 	char* Ptr = static_cast<char*>(m_Buffer);
 	for (size_t i = 0; i < m_Capacity; ++i)
 	{
-		m_listFreePtrs.push_back(Ptr);
+		FreeNode* Node = reinterpret_cast<FreeNode*>(Ptr);
+		Node->Next = m_FreeHead;
+		m_FreeHead = Node;
 		Ptr += m_ObjectSize;
+
 	}
 }
 
@@ -67,10 +76,6 @@ inline void MemoryPool<T>::Destroy()
 		m_Buffer = nullptr;
 	}
 
-
-	// Free 리스트 비우기
-	m_listFreePtrs.clear();
-
 	// 메타데이터 초기화
 	m_Capacity = 0;
 	m_ObjectSize = 0;
@@ -79,16 +84,16 @@ inline void MemoryPool<T>::Destroy()
 template<typename T>
 inline T* MemoryPool<T>::Allocate()
 {
-	if (m_listFreePtrs.empty())
+	if (m_FreeHead == nullptr)
 	{
 		// 풀 고갈 상황
 		return nullptr;
 	}
-	void* Ptr = m_listFreePtrs.front();
-	// new placement 호출로 생성자 자동 호출 및 객체 생명주기 시작
-	T* Node = new (Ptr) T;
-	m_listFreePtrs.pop_front();
-	return Node;
+	// Head에서 노드 하나 꺼내오기
+	FreeNode* Node = m_FreeHead;
+	m_FreeHead = m_FreeHead->Next;
+	// Placement new 호출로 생성자 자동 호출 및 객체 생명주기 시작
+	return ::new (Node) T();
 }
 
 template<typename T>
@@ -96,5 +101,8 @@ inline void MemoryPool<T>::Deallocate(T* _Obj)
 {
 	// 객체의 소멸자 호출
 	_Obj->~T();
-	m_listFreePtrs.push_back((void*)_Obj);
+	// 리스트에 반납
+    FreeNode* Node = reinterpret_cast<FreeNode*>(_Obj);
+    Node->Next = m_FreeHead;
+    m_FreeHead = Node;
 }
