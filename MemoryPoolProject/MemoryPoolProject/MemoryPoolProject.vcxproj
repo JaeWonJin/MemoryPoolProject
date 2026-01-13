@@ -131,7 +131,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="CBullet.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MemoryPool.cpp" />
     <ClCompile Include="pch.cpp">
@@ -140,9 +139,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CBullet.h" />
+    <ClInclude Include="define.h" />
     <ClInclude Include="MemoryPool.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="singleton.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
